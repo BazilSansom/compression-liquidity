@@ -1,16 +1,17 @@
 """
-Shock models for intraday liquidity drains (ξ), not VM calls.
+Shock models for intraday liquidity drains ξ, not VM calls.
 
-In this framework, each node i starts the day with an intended liquidity buffer b_i.
-Before the VM settlement window, nodes experience random intraday liquidity drains ξ_i
-(e.g. unexpected outgoing payments, settlement flows, or other cash uses).
+In the model, each node i starts with an intended liquidity buffer b_i.
+Before the VM settlement window, nodes experience random intraday liquidity
+drains ξ_i (e.g. unexpected outgoing payments, settlement flows, or other cash uses).
 
-The effective liquidity available for settling VM is then:
+The effective liquidity available for settling VM is:
 
     available[i] = buffers[i] - xi[i]
 
 These intraday drains are one of the two sources of randomness in the model
-(the other being random network generation).
+(the other being random network generation). The VM shock process itself is
+parameterised separately (e.g. via sigma, m); it is *not* handled here.
 """
 
 from dataclasses import dataclass
@@ -22,21 +23,20 @@ from .networks import PaymentNetwork
 @dataclass
 class ShockModel:
     """
-    Parameters for the distribution of intraday liquidity drains ξ.
+    Parameters for the distribution of intraday liquidity drains ξ,
+    modelled via a Gaussian copula.
 
-    This is intentionally generic; concrete experiments can interpret sigma, m, etc.
-    as needed. For example, they might control the scale and severity of ξ relative
-    to some notion of 'normal' liquidity usage.
+    The intended structure is:
+      - correlation parameter rho ∈ [0, 1), controlling the dependence of
+        shocks across nodes;
+      - magnitude parameter gamma ≥ 0, governing the overall stress level
+        (e.g. scaling the typical size of ξ relative to some baseline).
 
-    Attributes
-    ----------
-    sigma : float
-        Scale parameter for the dispersion of ξ.
-    m : float
-        Stress multiplier (e.g. number of 'sigma' moves).
+    The exact mapping from (rho, gamma) to the distribution of ξ (including any
+    normalisation or truncation) follows the specification in the paper.
     """
-    sigma: float
-    m: float
+    rho: float   # cross-sectional correlation of ξ via Gaussian copula
+    gamma: float # overall magnitude / stress parameter
 
 
 def draw_shock(
@@ -45,30 +45,33 @@ def draw_shock(
     shock_model: ShockModel,
 ) -> np.ndarray:
     """
-    Draw a single realised intraday liquidity drain vector ξ for all nodes.
+    Draw a single realised intraday liquidity drain vector ξ for all nodes,
+    using a Gaussian copula with correlation rho and magnitude gamma.
 
-    The realised ξ reduces the buffers available at the VM settlement window via:
+    Conceptual design (to be implemented):
+      1. Construct a correlation structure with parameter shock_model.rho.
+      2. Draw a vector of correlated standard normals Z ~ N(0, Σ(rho)).
+      3. Map Z through Φ (normal CDF) to obtain correlated uniforms U.
+      4. Transform U into non-negative drains ξ, scaled by shock_model.gamma
+         and possibly by node characteristics (e.g. size, outgoing VM).
+
+    The realised ξ reduces the buffers available at the VM settlement window:
 
         available[i] = buffers[i] - xi[i]
-
-    The exact distribution and mapping from ShockModel to node-level drains
-    is to be specified in the experimental design (e.g. iid across nodes,
-    correlated across nodes, scaled by node size, etc.).
 
     Parameters
     ----------
     rng : np.random.Generator
         Random number generator for reproducibility.
     network : PaymentNetwork
-        Network object (used at least for its number of nodes; potentially for
-        node-specific scaling of shocks).
+        Used at least for its number of nodes; possibly for node-specific scaling.
     shock_model : ShockModel
-        Parameters governing the distribution/scale of ξ (correlation - ρ, scale - γ).
+        Parameters (rho, gamma) governing the Gaussian-copula distribution of ξ.
 
     Returns
     -------
     np.ndarray
         Shock vector xi[i] applied to each node's buffer (non-negative drains).
     """
-    # TODO: implement ξ-generation consistent with the experimental design
+    # TODO: implement Gaussian-copula-based ξ-generation consistent with the paper
     raise NotImplementedError("draw_shock is not yet implemented.")
