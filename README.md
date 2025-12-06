@@ -51,6 +51,12 @@ The `src/` directory is the reusable, stable part of the codebase that we get ri
 
 The model follows the conceptual flow used in the paper: Buffers b → Intraday shocks ξ → Available liquidity b - ξ → VM payment obligations → Full Payment Algorithm (FPA) → Liquidity shortfall L → ERLS computation.
 
+The model contains two sources of randomness:
+- the randomly generated OTC network (structure and notionals),
+- the intraday liquidity shocks ξ applied to buffers.
+
+VM obligations themselves are fixed by the network and shock scenarios we consider by varying shock size not random draws.
+
 
 ### PaymentNetwork
 
@@ -58,6 +64,8 @@ A minimal structure representing the network of VM payment obligations:
 
 - `W[i, j]` = VM obligation from node *i* to node *j*  
 - `node_types[i]` ∈ { "core", "source", "sink" }
+
+Random networks are used to understand typical behaviour across ensembles of possible OTC configurations.
 
 The network is the only object modified by compression.
 
