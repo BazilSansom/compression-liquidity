@@ -4,3 +4,5 @@
 # Python cache
 __pycache__/
 *.pyc
+
+compression_liquidity.egg-info/
