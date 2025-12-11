@@ -328,7 +328,7 @@ from src.simulation import run_fpa
 
 | Parameter      | Description                                                                          |
 | -------------- | ------------------------------------------------------------------------------------ |
-| `L`            | (N \times N) *liabilities matrix*: `L[i, j]` = obligation from node *i* to node *j*. |
+| `L`            | (N x N) *liabilities matrix*: `L[i, j]` = obligation from node *i* to node *j*. |
 | `e0`           | Length-(N) array of initial cash balances (b(0)).                                    |
 | `rel_tol`      | Numerical tolerance for liquidity checks (default `1e-8`).                           |
 | `return_paths` | If `True`, returns the full sequence of cash/payment vectors.                        |
