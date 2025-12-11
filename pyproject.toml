@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compression-liquidity"
+version = "0.1.0"
+description = "Simulation framework for portfolio compression and systemic liquidity risk"
+readme = "README.md"
+requires-python = ">=3.10"
+
+authors = [
+    { name = "Bazil Sansom", email = "Bazil.Sansom@warwick.ac.uk" },
+]
+
+license = { text = "MIT" }  # or update if you're using something else
+
+# Trove classifiers are optional but nice for later PyPI / metadata
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+# Runtime dependencies (for actually USING the library)
+dependencies = [
+    "numpy>=1.24",
+    "networkx>=3.0",
+    "pulp>=2.7",     # if you use PuLP for compression optimisation
+]
+
+[project.optional-dependencies]
+# Development / testing / linting / formatting
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+    "black>=24.0",
+    "ruff>=0.6.0",
+    "ipython",
+]
+
+# --------------------------------------------------------------------
+# Setuptools configuration
+# --------------------------------------------------------------------
+[tool.setuptools]
+# We let setuptools auto-discover packages and modules.
+# This works if you have a package directory (e.g. compression/)
+# or just modules like simulation.py at the top level.
+# If you later adopt a src/ layout, you'll change `where = ["src"]`.
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
+exclude = ["tests*", "scratch*", "docs*"]
+
+# --------------------------------------------------------------------
+# Pytest configuration
+# --------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+addopts = "-q"
+
+# --------------------------------------------------------------------
+# Black configuration (code formatting)
+# --------------------------------------------------------------------
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+# --------------------------------------------------------------------
+# Ruff configuration (linting)
+# --------------------------------------------------------------------
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]  # basic errors, formatting-ish, imports
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
