@@ -56,7 +56,7 @@ The model contains two sources of randomness:
 VM obligations themselves are fixed by the network and shock scenarios we consider by varying shock size not random draws.
 
 
-## Network Generation (`src/networks.py`)
+## 🕸️ Network Generation (`src/networks.py`)
 
 The module `networks.py` provides a clean and flexible interface for generating synthetic OTC derivatives networks consistent with the three-tier “bow-tie” structure documented in the literature (e.g. D’Errico & Roukny 2017; Craig & von Peter 2014).
 
