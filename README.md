@@ -314,7 +314,7 @@ print("Net positions preserved?", np.allclose(G.net_positions, G_comp.net_positi
 
 ---
 
-## 📘 `simulation.py` — Full Payment Algorithm (FPA)
+## 🔄 `simulation.py` — Full Payment Algorithm (FPA)
 
 The `simulation.py` module implements the Full Payment Algorithm (FPA) as described in Bardoscia et al. (2019).
 FPA iteratively settles obligations on a directed liabilities network given available liquidity.
