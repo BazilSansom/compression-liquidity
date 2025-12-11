@@ -270,6 +270,47 @@ Ensures:
 Raises ValueError on violations.
 
 
+### Example usage
+
+```python
+import numpy as np
+from numpy.random import default_rng
+
+from src.networks import generate_three_tier_network
+from src.compression import compress_BFF, compress_maxC
+
+rng = default_rng(123)
+
+# 1. Generate a synthetic OTC-style network
+G = generate_three_tier_network(
+    n_core=10,
+    n_source=5,
+    n_sink=5,
+    p=0.05,
+    rng=rng,
+    degree_mode="bernoulli",
+    weight_mode="pareto",
+    round_to=0.01,
+)
+
+# 2. Apply BFF-based compression (full conservative by default)
+res_bff = compress_BFF(G)
+
+print("BFF gross before:", res_bff.gross_before)
+print("BFF gross after :", res_bff.gross_after)
+print("BFF savings (%) :", 100 * res_bff.savings_frac)
+
+# 3. Apply maximal compression (min-cost flow via OR-Tools)
+res_maxC = compress_maxC(G, solver="ortools")
+
+print("max-C gross after:", res_maxC.gross_after)
+print("max-C savings (%) :", 100 * res_maxC.savings_frac)
+
+# The compressed payment network (directional part)
+G_comp = res_maxC.compressed
+print("Net positions preserved?", np.allclose(G.net_positions, G_comp.net_positions))
+```
+
 ---
 
 ### Shock model — intraday liquidity drains (not VM calls)
