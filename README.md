@@ -66,7 +66,7 @@ The module `networks.py` provides a clean and flexible interface for generating 
 
 All networks are represented by the `PaymentNetwork` dataclass:
 
-```
+```python
 @dataclass
 class PaymentNetwork:
     W: np.ndarray              # weighted adjacency: obligations from i → j
@@ -85,7 +85,7 @@ Convenience properties:
 
 Networks are generated using:
 
-```
+```python
 generate_three_tier_network(
     n_core,
     n_source,
@@ -130,7 +130,7 @@ Weights can be generated with:
 - **Uniform** baseline
 - **Constant** weights
 
-```
+```python
 weight_mode="pareto" | "uniform" | "constant"
 ```
 
@@ -148,7 +148,7 @@ Optional parameters:
 
 Some random networks may contain isolated nodes or small disconnected components. A helper function is provided:
 
-```
+```python
 from src.networks import extract_largest_component
 
 G_clean = extract_largest_component(G)
@@ -165,7 +165,7 @@ Useful when focusing on the “active” OTC market.
 
 ### Example Usage
 
-```
+```python
 import numpy as np
 from src.networks import generate_three_tier_network, extract_largest_component
 
