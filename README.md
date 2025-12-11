@@ -24,8 +24,6 @@ The design separates:
 
 # 🗂 Repository Structure
 
-
-
 ```
 src/                     ← core reusable library code
     networks.py          ← PaymentNetwork object; random network generator
@@ -192,16 +190,85 @@ print("Nodes in largest component:", G_largest.num_nodes)
 
 ---
 
-### Compression algorithms
+## 🧩 Compression algorithms (`src/compression.py`)
 
-Compression produces a new network that preserves net positions but reduces gross exposure.
+This module implements full conservative portfolio compression for PaymentNetwork objects using the circular flow decomposition (CDFD) (Homs Dones et al. 2025). It provides:
+- BFF compression — uses the Balanced Flow Forwarding algorithm to remove redundent possitions leaving no cycles.
+- max-C compression — finds the maximum possible reduction in gross notional while preserving net positions (leaves no cycles).
+- Validation utilities — ensuring that compression outputs satisfy all required constraints.
 
-- `compress_maxC(network) → (compressed_network, stats)`
-- `compress_BFF(network) → (compressed_network, stats)`
+All compression routines return a CompressionResult dataclass containing the compressed network, savings statistics, and the CDFD circular ($C$) and directional ($D$) components.
 
-- **max-C**: implements full conservative compression by maximising circulation  
-  (via CDFD), eliminating redundant cyclic exposures.
-- **BFF**: implements alternative full concervative compression using Balanced Flow Forwarding algorithm.
+**✔️ What Compression Guarantees**
+
+A valid conservative compression must satisfy:
+1. **Net positions preserved** $outflow_{i}-inflow_{i}$ unchanged for all $i$
+2. **No new counterparties** Support of the compressed network must be a subset of the original support.
+3. **No negative edges**
+4. **Gross notional does not increase**
+
+A valid full conservative compression must additionally satisfy:
+
+5. **Acyclic directional part** (compressed network is a DAG)
+
+These conditions are formally checked by:
+- `validate_conservative_compression(...)`
+- `validate_full_conservative(...)`
+  
+These are called automatically inside `compress_BFF` and `compress_maxC` unless disabled.
+
+**⚙️ API Summary**
+`compress_BFF(G, tol_zero=1e-12, require_conservative=True, require_full_conservative=True)`
+
+- Performs compression using the Balanced Flow Forwarding (BFF) method.
+- Returns `CompressionResult`.
+
+`compress_maxC(G, solver="ortools", ...)`
+
+- Computes maximal compression, i.e. minimises notional
+- Returns CompressionResult.
+
+Available solvers:
+- `"ortools"` (default): Integer min-cost flow, robust on Apple Silicon, suitable for money-like data.
+- `"pulp"`: PuLP + CBC solver. Not recommended on Apple Silicon unless CBC is separately installed.
+
+**📦 `CompressionResult`**
+
+```python
+@dataclass
+class CompressionResult:
+    compressed: PaymentNetwork       # compressed network (directional part)
+    method: str                      # "BFF", "maxC_ortools", ...
+    gross_before: float
+    gross_after: float
+    savings_abs: float
+    savings_frac: float
+    C_circular: csr_array | None     # circular component
+    D_directional: csr_array         # directional component
+    meta: dict                       # solver diagnostics
+
+```
+
+**🔍 Validation Functions (Safety Checks)**
+
+`validate_conservative_compression(G_before, result, tol=1e-10)`
+
+Ensures the solution satisfies:
+- net positions preserved
+- no new edges
+- non-negative weights
+- gross notional does not increase
+
+Raises ValueError on violations.
+
+`validate_full_conservative(G_before, result, tol=1e-10)`
+
+Ensures:
+- conservative compression (above)
+- compressed network is acyclic
+
+Raises ValueError on violations.
+
 
 ---
 
