@@ -22,7 +22,7 @@ The design separates:
 ---
 
 
-## 🗂 Repository Structure
+# 🗂 Repository Structure
 
 
 
@@ -47,7 +47,7 @@ The `src/` directory is the reusable, stable part of the codebase that we get ri
 
 ---
 
-## Core Abstractions and Intended API
+# Core Abstractions and Intended API
 
 The model follows the conceptual flow used in the paper: Buffers b → Intraday shocks ξ → Available liquidity b - ξ → VM payment obligations → Full Payment Algorithm (FPA) → Liquidity shortfall L → ERLS computation.
 
@@ -58,24 +58,137 @@ The model contains two sources of randomness:
 VM obligations themselves are fixed by the network and shock scenarios we consider by varying shock size not random draws.
 
 
+## Network Generation (`src/networks.py`)
+
+The module `networks.py` provides a clean and flexible interface for generating synthetic OTC derivatives networks consistent with the three-tier “bow-tie” structure documented in the literature (e.g. D’Errico & Roukny 2017; Craig & von Peter 2014).
+
 ### PaymentNetwork
 
-A minimal structure representing the network of VM payment obligations:
+All networks are represented by the `PaymentNetwork` dataclass:
 
-- `W[i, j]` = VM obligation from node *i* to node *j*  
-- `node_types[i]` ∈ { "core", "source", "sink" }
+```
+@dataclass
+class PaymentNetwork:
+    W: np.ndarray              # weighted adjacency: obligations from i → j
+    source_nodes: List[int]    # indices of source-tier nodes
+    core_nodes: List[int]      # indices of dealer core
+    sink_nodes: List[int]      # indices of sink-tier nodes
+```
 
-Random networks are used to understand typical behaviour across ensembles of possible OTC configurations.
+Convenience properties:
 
-The network is the only object modified by compression.
+- `num_nodes`
+- `gross_notional`
+- `net_positions = outflows – inflows`
 
----
+### Three–tier topology
 
-### Network generation
+Networks are generated using:
 
-`generate_three_tier_network(...)`  
-Constructs synthetic OTC-style networks with a core–periphery structure  
-and source/sink nodes, consistent with the model used in the paper.
+```
+generate_three_tier_network(
+    n_core,
+    n_source,
+    n_sink,
+    p,
+    *,
+    degree_mode="bernoulli",
+    weight_mode="pareto",
+    rng=None,
+    ...
+)
+```
+
+This creates a directed network with:
+
+- **source → core** links
+- **core ↔ core** ER links
+- **core → sink** links
+
+**Topology modes**
+
+`degree_mode="bernoulli"` **(default)**
+
+Each potential edge is present independently with probability $p$:
+- source out-degree ∼Binomial($𝑛_{core},p$)
+- sink in-degree ∼Binomial($𝑛_{core},p$)
+- core–core forms a directed ER graph
+
+This matches:
+- The model described in our current draft of the paper
+- D’Errico & Roukny (2017)
+- Standard systemic-risk models using ER random graphs
+
+`degree_mode="fixed"` **(optional)**
+Each source/sink connects to approximately $pn_{core}$ dealers (degree-regular periphery), reproducing behaviour in earlier code versions.
+Useful for robustness checks.
+
+**Edge-weight options**
+
+Weights can be generated with:
+- **Heavy-tailed Pareto** (default)
+- **Uniform** baseline
+- **Constant** weights
+
+```
+weight_mode="pareto" | "uniform" | "constant"
+```
+
+The default heavy-tailed Pareto weights reflect the empirical concentration of bilateral derivatives exposures and match the modelling choice used in our current draft of the paper and in D’Errico & Roukny (2017).
+
+Uniform and constant weight modes are included as simple robustness baselines.
+
+Optional parameters:
+- `alpha_weights` – Pareto tail exponent
+- `scale_weights` – global scaling
+- `round_to` – round weights to nearest multiple (e.g. 0.01)
+
+
+### Largest Component Extraction
+
+Some random networks may contain isolated nodes or small disconnected components. A helper function is provided:
+
+```
+from src.networks import extract_largest_component
+
+G_clean = extract_largest_component(G)
+```
+
+This:
+- treats edges as undirected for connectivity purposes,
+- selects the largest weakly connected component,
+- drops inactive nodes (degree 0),
+- remaps tier indices correctly.
+
+Useful when focusing on the “active” OTC market.
+
+
+### Example Usage
+
+```
+import numpy as np
+from src.networks import generate_three_tier_network, extract_largest_component
+
+rng = np.random.default_rng(42)
+
+# Generate a Bernoulli topology with Pareto weights
+G = generate_three_tier_network(
+    n_core=20,
+    n_source=20,
+    n_sink=20,
+    p=0.1,
+    rng=rng,
+    degree_mode="bernoulli",
+    weight_mode="pareto",
+)
+
+print("Gross notional:", G.gross_notional)
+print("Net position sum:", G.net_positions.sum())  # ≈ 0
+
+# Optionally focus on the active market
+G_largest = extract_largest_component(G)
+print("Nodes in largest component:", G_largest.num_nodes)
+```
 
 ---
 
