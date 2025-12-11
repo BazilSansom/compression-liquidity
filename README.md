@@ -311,9 +311,108 @@ G_comp = res_maxC.compressed
 print("Net positions preserved?", np.allclose(G.net_positions, G_comp.net_positions))
 ```
 
+
 ---
 
-### Shock model — intraday liquidity drains (not VM calls)
+## 📘 `simulation.py` — Full Payment Algorithm (FPA)
+
+The `simulation.py` module implements the Full Payment Algorithm (FPA) as described in Bardoscia et al. (2019).
+FPA iteratively settles obligations on a directed liabilities network given available liquidity.
+It forms the core payment-clearing procedure used throughout this project.
+
+🚀 `run_fpa(L, e0)` — compute clearing payments and shortfalls
+
+```python
+from src.simulation import run_fpa
+```
+
+| Parameter      | Description                                                                          |
+| -------------- | ------------------------------------------------------------------------------------ |
+| `L`            | (N \times N) *liabilities matrix*: `L[i, j]` = obligation from node *i* to node *j*. |
+| `e0`           | Length-(N) array of initial cash balances (b(0)).                                    |
+| `rel_tol`      | Numerical tolerance for liquidity checks (default `1e-8`).                           |
+| `return_paths` | If `True`, returns the full sequence of cash/payment vectors.                        |
+
+Outputs: `FPAResult`
+
+`run_fpa` returns a dataclass:
+
+```python
+@dataclass
+class FPAResult:
+    residual_obligations: np.ndarray   # l_ss
+    final_cash: np.ndarray             # b_ss
+    final_payments: np.ndarray         # payments in final iteration
+    residual_matrix: np.ndarray        # Pi * l_ss
+    iterations: int                    # number of updates after t=0
+    first_round_residual: np.ndarray   # l(1)
+    shortfall: np.ndarray              # max(0, l_ss - b_ss)
+    aggregate_shortfall: float         # sum(shortfall)
+    cash_path: list[np.ndarray] | None
+    payment_path: list[np.ndarray] | None
+    indicator_path: list[np.ndarray] | None
+```
+
+Key result attributes:
+- `residual_obligations`: unpaid obligations at termination
+- `final_cash`: steady-state cash
+- `shortfall`: node-level liquidity shortfalls (equation 4 in the paper)
+- `aggregate_shortfall`: system-wide shortfall measure $R$ (equation ? in the paper)
+
+All vectors are $𝑁×1$ column vectors.
+
+### ✨ Example
+
+```python
+import numpy as np
+from src.simulation import run_fpa
+
+# Simple 3-node cycle: A -> B -> C -> A
+Pi = np.array([
+    [0, 1, 0],
+    [0, 0, 1],
+    [1, 0, 0],
+], float)
+
+pbar = np.array([10.0, 7.0, 5.0])    # total obligations
+L = np.diag(pbar) @ Pi               # liabilities matrix
+
+e0 = np.array([12.0, 4.0, 3.0])      # initial liquidity
+
+result = run_fpa(L, e0)
+
+print(result.final_cash)
+print(result.shortfall)
+print(result.aggregate_shortfall)
+```
+
+Expected output:
+
+```python
+final_cash =
+[[7.],
+ [7.],
+ [5.]]
+shortfall =
+[[0.],
+ [0.],
+ [0.]]
+aggregate_shortfall = 0.0
+```
+
+This reproduces Example 1 from Bardoscia et al. (2019).
+
+### 🧪 Testing and correctness
+
+The implementation is validated against the canonical worked examples in the original FPA paper.
+
+Tests live under:
+`tests/test_fpa_paper_examples.py`
+
+
+---
+
+## Shock model — intraday liquidity drains (not VM calls)
 
 Shocks ξ represent **intraday liquidity drains** that occur *before* the VM settlement window.
 
