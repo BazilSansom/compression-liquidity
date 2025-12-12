@@ -134,6 +134,7 @@ class UniformShockShapeParams:
     rho: float
 
 
+
 def generate_uniform_factor_shapes(
     num_nodes: int,
     params: UniformShockShapeParams,

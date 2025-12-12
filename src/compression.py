@@ -313,3 +313,62 @@ def validate_full_conservative(
             f"Compression '{result.method}' is not acyclic: "
             "compressed network still contains directed cycles."
         )
+
+
+
+def compress(
+    G: PaymentNetwork,
+    *,
+    method: str = "bff",
+    tol_zero: float = 1e-12,
+    # maxC options
+    solver: str = "ortools",
+    # validation options
+    require_conservative: bool = True,
+    require_full_conservative: bool = True,
+) -> CompressionResult:
+    """
+    Unified compression wrapper.
+
+    Parameters
+    ----------
+    G : PaymentNetwork
+        Network to compress.
+    method : str
+        Compression method:
+          - "bff"  : BFF-based CDFD compression
+          - "maxc" : maximal compression (min-cost flow)
+    tol_zero : float
+        Numerical tolerance passed to the underlying solver.
+    solver : str
+        Only used for method="maxc". One of {"ortools","pulp"}.
+    require_conservative, require_full_conservative : bool
+        Validation flags.
+
+    Returns
+    -------
+    CompressionResult
+    """
+    m = method.strip().lower()
+
+    if m in {"bff", "cdfd_bff"}:
+        return compress_BFF(
+            G,
+            tol_zero=tol_zero,
+            require_conservative=require_conservative,
+            require_full_conservative=require_full_conservative,
+        )
+
+    if m in {"maxc", "max_c", "max-c"}:
+        return compress_maxC(
+            G,
+            tol_zero=tol_zero,
+            solver=solver,
+            require_conservative=require_conservative,
+            require_full_conservative=require_full_conservative,
+        )
+
+    raise ValueError(
+        f"Unknown compression method '{method}'. "
+        "Use one of: 'bff', 'maxc'."
+    )
