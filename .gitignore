@@ -1,8 +1,44 @@
-# Virtual environments
+# ===============================
+# Python / virtual environments
+# ===============================
 .venv/
+venv/
+.env/
 
-# Python cache
+# ===============================
+# Python bytecode / caches
+# ===============================
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 
-compression_liquidity.egg-info/
+# ===============================
+# Packaging / build artifacts
+# ===============================
+*.egg-info/
+dist/
+build/
+
+# ===============================
+# Test / coverage artifacts
+# ===============================
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ===============================
+# Jupyter / scratch outputs
+# ===============================
+.ipynb_checkpoints/
+
+# ===============================
+# Generated figures / results
+# ===============================
+figures/
+
+# ===============================
+# OS / editor cruft
+# ===============================
+.DS_Store
+.idea/
+.vscode/
