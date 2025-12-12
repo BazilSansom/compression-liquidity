@@ -177,3 +177,66 @@ def generate_uniform_factor_shapes(
     )
     U = gaussian_to_uniform01(Z)
     return U
+
+
+
+def generate_liquidity_drain_xi(
+    V_ref: np.ndarray,
+    *,
+    rho: float,
+    lam: float,
+    seed: Optional[int] = None,
+    scale: str = "row_sum",
+) -> np.ndarray:
+    """
+    Generate a one-sided liquidity drain vector xi (N x 1) in £, to be subtracted
+    from buffers before running FPA.
+
+    xi_i = lam * s_i(V_ref) * U_i,
+    where U_i ~ Uniform(0,1) with Gaussian-copula dependence controlled by rho.
+
+    Parameters
+    ----------
+    V_ref : np.ndarray
+        Reference VM obligations matrix used ONLY to set scale (typically pre-compression V).
+        This supports the "fixed £ shock across compression" experiment design.
+    rho : float
+        Dependence parameter for Gaussian-copula uniform draws.
+        rho=0 independent; rho=1 perfectly common in the underlying factor model.
+    lam : float
+        Intensity. Since U in [0,1], xi_i <= lam * s_i(V_ref).
+    seed : int, optional
+        RNG seed for reproducibility.
+    scale : {"row_sum","col_sum","total"}
+        How to map V_ref to node scale s_i(V_ref):
+        - "row_sum": s_i = sum_j V_ref[i,j] (outgoing payable) [default]
+        - "col_sum": s_i = sum_j V_ref[j,i] (incoming receivable)
+        - "total":   s_i = (sum_{k,l} V_ref[k,l]) / N (equal per node based on total)
+
+    Returns
+    -------
+    xi : np.ndarray
+        N x 1 vector of non-negative drains in £.
+    """
+    V_ref = np.asarray(V_ref, dtype=float)
+    N = V_ref.shape[0]
+
+    U = generate_uniform_factor_shapes(
+        num_nodes=N,
+        params=UniformShockShapeParams(rho=rho),
+        n_samples=1,
+        seed=seed,
+    )[0, :].reshape(-1, 1)
+
+    if scale == "row_sum":
+        s = V_ref.sum(axis=1).reshape(-1, 1)
+    elif scale == "col_sum":
+        s = V_ref.sum(axis=0).reshape(-1, 1)
+    elif scale == "total":
+        s = np.full((N, 1), V_ref.sum() / N, dtype=float)
+    else:
+        raise ValueError("scale must be one of {'row_sum','col_sum','total'}")
+
+    xi = lam * s * U
+    return xi
+
