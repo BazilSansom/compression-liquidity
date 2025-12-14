@@ -54,10 +54,10 @@ class NetworkSpec:
     weight_mode: str = "pareto"
     alpha_weights: float = 2.0
     scale_weights: float = 1.0
+    round_to: float | None = 0.01
 
     # Degree / topology options
     degree_mode: str = "bernoulli"
-    round_to: float | None = None
 
     # RNG control
     seed_offset: int = 1_000

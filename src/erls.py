@@ -14,6 +14,7 @@ from src.experiments import find_min_buffers_for_target_shortfall
 class ERLSResult:
     alpha_pre: float
     alpha_post: float
+    kappa: float          # alpha_post / alpha_pre (scale-factor / conservativeness ratio)
     B_pre: float
     B_post: float
     erls: float
@@ -79,8 +80,13 @@ def compute_erls_zero_shortfall(
         ERLS = 1 - (B_post / B_pre)  (if B_pre > 0, else 0 by convention)
 
     buffer_mode:
-      - "fixed_shape": post compression uses the same base buffer *shape* as pre (Exp 2).
-      - "behavioural": buffer shape is recomputed under compression (Exp 3).
+      - "fixed_shape": post compression uses the same base buffer *shape* as pre (planner benchmark).
+      - "behavioural": buffer shape is recomputed under compression (behavioural benchmark).
+
+    Returns:
+      - kappa = alpha_post / alpha_pre
+        In fixed_shape this is exactly the required scalar scale-factor ratio.
+        In behavioural this is the required change in proportionality ("conservativeness") per unit base.
     """
     V = np.asarray(V, dtype=float)
     V_tilde = np.asarray(V_tilde, dtype=float)
@@ -92,7 +98,7 @@ def compute_erls_zero_shortfall(
     b_base_pre = behavioural_base_from_V(V)
 
     if buffer_mode == "fixed_shape":
-        # Exp 2: same shape pre and post
+        # same shape pre and post
         alpha_pre, b_pre, fpa_pre = find_min_buffers_for_target_shortfall(
             V=V,
             xi=xi,
@@ -109,7 +115,7 @@ def compute_erls_zero_shortfall(
         )
 
     elif buffer_mode == "behavioural":
-        # Exp 3: shape recomputed under compression
+        # shape recomputed under compression
         alpha_pre, b_pre, fpa_pre = find_min_buffers_for_target_shortfall(
             V=V,
             xi=xi,
@@ -127,18 +133,20 @@ def compute_erls_zero_shortfall(
     else:
         raise ValueError("buffer_mode must be one of {'fixed_shape','behavioural'}")
 
-    # 3) ERLS based on total buffers (comparable even when shapes differ)
+    # 3) ERLS based on total buffers
     B_pre = float(b_pre.sum())
     B_post = float(b_post.sum())
+    erls = 0.0 if B_pre <= 0.0 else (1.0 - (B_post / B_pre))
 
-    if B_pre <= 0.0:
-        erls = 0.0
-    else:
-        erls = 1.0 - (B_post / B_pre)
+    # 4) Conservativeness / scale-factor ratio
+    alpha_pre_f = float(alpha_pre)
+    alpha_post_f = float(alpha_post)
+    kappa = float("nan") if alpha_pre_f <= 0.0 else (alpha_post_f / alpha_pre_f)
 
     return ERLSResult(
-        alpha_pre=float(alpha_pre),
-        alpha_post=float(alpha_post),
+        alpha_pre=alpha_pre_f,
+        alpha_post=alpha_post_f,
+        kappa=float(kappa),
         B_pre=float(B_pre),
         B_post=float(B_post),
         erls=float(erls),

@@ -81,6 +81,7 @@ def run_optionA_erls_vs_lambda(
         comp = compress(
             G,
             method=spec.compression.method,
+            #method = "maxc",
             solver=spec.compression.solver,
             tol_zero=spec.compression.tol_zero,
             require_conservative=spec.compression.require_conservative,

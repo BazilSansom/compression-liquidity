@@ -5,12 +5,12 @@ BASE_CASE = ExperimentSpec(
     network=NetworkSpec(
         n_core=30, n_source=10, n_sink=10, p=0.4,
         weight_mode="pareto", alpha_weights=2.0, scale_weights=1.0,
-        degree_mode="bernoulli", round_to=None,
+        degree_mode="bernoulli", round_to=0.01,
         use_lcc=True,
         seed_offset=1_000,
     ),
     shock=ShockSpec(
-        rho_xi=0.3,
+        rho_xi=0,
         xi_scale="row_sum",
         lam_grid=(0.0, 0.25, 0.5, 0.75, 1.0),
         seed_offset=10_000,
