@@ -96,6 +96,9 @@ def run_erls_vs_lambda_optionA(
 
         V = np.asarray(G.W, dtype=float)
         N = int(G.num_nodes)  # IMPORTANT: may differ from spec.network.N if use_lcc=True
+        
+        flex_mask = np.zeros((N,), dtype=bool)
+        flex_mask[G.core_nodes] = True
 
         # --- 2) compress ---
         comp = compress(
@@ -122,6 +125,8 @@ def run_erls_vs_lambda_optionA(
 
 
         # --- 4) sweep lambda ---
+        flex_mask_arg = flex_mask if spec.buffer_mode == "fixed_shape_flexible" else None
+
         for lam in spec.shock.lam_grid:
             res = compute_erls_zero_shortfall(
                 V=V,
@@ -130,6 +135,7 @@ def run_erls_vs_lambda_optionA(
                 lam=float(lam),
                 xi_scale=spec.shock.xi_scale,
                 buffer_mode=spec.buffer_mode,
+                flex_mask=flex_mask_arg,
                 rel_tol_fpa=spec.search.rel_tol_fpa,
             )
 

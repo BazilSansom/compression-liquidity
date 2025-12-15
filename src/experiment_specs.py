@@ -10,8 +10,11 @@ from src.buffers import behavioural_base_from_V
 
 # --- Types ---
 XiScale = Literal["row_sum", "col_sum", "total"]
-BufferMode = Literal["fixed_shape", "behavioural"]
-
+BufferMode = Literal[
+    "fixed_shape",
+    "fixed_shape_flexible",
+    "behavioural",
+]
 
 @dataclass(frozen=True)
 class BufferSearchSpec:
@@ -83,6 +86,12 @@ class CompressionSpec:
 class ExperimentSpec:
     """
     One place to declare *everything* needed to run an experiment.
+    
+    buffer_mode:
+    - "fixed_shape": scale all nodes uniformly (planner benchmark)
+    - "fixed_shape_flexible": scale only flexible nodes; others fixed at benchmark (planner-flex)
+    - "behavioural": buffer shape recomputed under compression
+
     """
     name: str
     network: NetworkSpec

@@ -7,7 +7,8 @@ from typing import Literal
 import numpy as np
 
 from src.buffers import behavioural_base_from_V
-from src.experiments import find_min_buffers_for_target_shortfall
+from src.experiments import find_min_buffers_for_target_shortfall, find_min_buffers_for_target_shortfall_masked
+
 
 
 @dataclass
@@ -63,9 +64,11 @@ def compute_erls_zero_shortfall(
     lam: float,
     *,
     xi_scale: Literal["row_sum", "col_sum", "total"] = "row_sum",
-    buffer_mode: Literal["fixed_shape", "behavioural"] = "behavioural",
+    buffer_mode: Literal["fixed_shape", "fixed_shape_flexible", "behavioural"] = "behavioural",
+    flex_mask: np.ndarray | None = None,
     rel_tol_fpa: float = 1e-8,
 ) -> ERLSResult:
+    
     """
     Compute ERLS for a single draw (V, U_base), at intensity lam, targeting zero shortfall.
 
@@ -82,7 +85,7 @@ def compute_erls_zero_shortfall(
     buffer_mode:
       - "fixed_shape": post compression uses the same base buffer *shape* as pre (planner benchmark).
       - "behavioural": buffer shape is recomputed under compression (behavioural benchmark).
-
+      - "fixed_shape_flexible": scale only flexible nodes; hold others fixed at pre-benchmark buffers (planner-flex benchmark).
     Returns:
       - kappa = alpha_post / alpha_pre
         In fixed_shape this is exactly the required scalar scale-factor ratio.
@@ -96,9 +99,12 @@ def compute_erls_zero_shortfall(
 
     # 2) Choose buffer shapes
     b_base_pre = behavioural_base_from_V(V)
+    b_base_pre = np.asarray(b_base_pre, dtype=float) # explicitly columnize b_base_pre so we know what we’re dealing with.
+    if b_base_pre.ndim == 1:
+        b_base_pre = b_base_pre.reshape(-1, 1)
 
     if buffer_mode == "fixed_shape":
-        # same shape pre and post
+        # same shape pre and post (scale everyone)
         alpha_pre, b_pre, fpa_pre = find_min_buffers_for_target_shortfall(
             V=V,
             xi=xi,
@@ -111,6 +117,54 @@ def compute_erls_zero_shortfall(
             xi=xi,
             target_shortfall=0.0,
             b_base=b_base_pre,
+            rel_tol_fpa=rel_tol_fpa,
+        )
+
+    elif buffer_mode == "fixed_shape_flexible":
+        # Planner variant: fix non-flex buffers at their pre-benchmark level,
+        # and scale only flex nodes by a scalar alpha.
+
+        if flex_mask is None:
+            raise ValueError("flex_mask must be provided when buffer_mode='fixed_shape_flexible'.")
+
+        flex_mask_col = np.asarray(flex_mask).astype(bool)
+        if flex_mask_col.ndim == 1:
+            flex_mask_col = flex_mask_col.reshape(-1, 1)
+
+        if flex_mask_col.shape[0] != V.shape[0]:
+            raise ValueError(f"flex_mask has wrong length: expected {V.shape[0]}, got {flex_mask_col.shape[0]}")
+
+        # 1) Compute the pre-benchmark buffers (scaling everyone) to pin non-flex buffers
+        alpha_bench, b_bench, _ = find_min_buffers_for_target_shortfall(
+            V=V,
+            xi=xi,
+            target_shortfall=0.0,
+            b_base=b_base_pre,
+            rel_tol_fpa=rel_tol_fpa,
+        )
+
+        # 2) Hold non-flex nodes fixed at their pre-benchmark levels
+        nonflex_mask_col = ~flex_mask_col
+        b_fixed = b_bench * nonflex_mask_col.astype(float)
+
+        # 3) Now search alpha scaling ONLY the flexible subset (same base shape, masked)
+        alpha_pre, b_pre, fpa_pre = find_min_buffers_for_target_shortfall_masked(
+            V=V,
+            xi=xi,
+            target_shortfall=0.0,
+            b_base=b_base_pre,
+            flex_mask=flex_mask_col,
+            b_fixed=b_fixed,
+            rel_tol_fpa=rel_tol_fpa,
+        )
+
+        alpha_post, b_post, fpa_post = find_min_buffers_for_target_shortfall_masked(
+            V=V_tilde,
+            xi=xi,
+            target_shortfall=0.0,
+            b_base=b_base_pre,
+            flex_mask=flex_mask_col,
+            b_fixed=b_fixed,
             rel_tol_fpa=rel_tol_fpa,
         )
 
@@ -130,8 +184,10 @@ def compute_erls_zero_shortfall(
             buffer_shape_fn=behavioural_base_from_V,
             rel_tol_fpa=rel_tol_fpa,
         )
+
     else:
-        raise ValueError("buffer_mode must be one of {'fixed_shape','behavioural'}")
+        raise ValueError("buffer_mode must be one of {'fixed_shape','fixed_shape_flexible','behavioural'}")
+
 
     # 3) ERLS based on total buffers
     B_pre = float(b_pre.sum())

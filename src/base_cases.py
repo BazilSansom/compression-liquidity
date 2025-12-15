@@ -1,7 +1,7 @@
 from src.experiment_specs import ExperimentSpec, NetworkSpec, ShockSpec, CompressionSpec, BufferSearchSpec
 
 BASE_CASE = ExperimentSpec(
-    name="base_optionA_erls_vs_lambda",
+    name="base_spec",
     network=NetworkSpec(
         n_core=30, n_source=10, n_sink=10, p=0.4,
         weight_mode="pareto", alpha_weights=2.0, scale_weights=1.0,
