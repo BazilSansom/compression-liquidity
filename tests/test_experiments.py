@@ -19,12 +19,13 @@ def _as_col(x):
     return x
 
 
+@pytest.mark.integration  # this is more integration-ish than unit
 @pytest.mark.parametrize(
     "fixture_fn",
     [bardoscia_example1, bardoscia_example2, bardoscia_example3],
 )
 def test_find_min_buffers_hits_target_and_is_near_minimal(fixture_fn):
-    V, _e0 = fixture_fn()
+    V, _e0, *_ = fixture_fn()  # <-- refactor for revised fixtures
 
     # Base buffer shape from behavioural rule (row sums of V)
     b_base = behavioural_base_from_V(V)
