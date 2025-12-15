@@ -30,6 +30,7 @@ htmlcov/
 # Jupyter / scratch outputs
 # ===============================
 .ipynb_checkpoints/
+scratch/
 
 # ===============================
 # Generated figures / results
