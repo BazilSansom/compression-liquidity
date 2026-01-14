@@ -72,24 +72,6 @@ Paper-facing LaTeX exports (maps numbers to latex macros and provides single sou
 - `outputs/paper/exp3_summary.json` (canonical Exp3 summary used by the exporter)
 
 
-
-**The consequences of portfolio compression for systemic liquidity risk**  
-*Working title*
-
-This repository contains a modular and reproducible implementation of the  
-simulation environment, compression algorithms, liquidity shock model,  
-and ERLS experiments used in the paper.
-
-The design separates:
-
-- a **core reusable layer** (`src/`), containing the stable abstractions and algorithms  
-  (network representation, compression, payments/FPA, shocks, buffers, ERLS), and
-- **experiment scripts** (`experiments/`), which assemble the components to reproduce  
-  the figures in the paper.
-
----
-
-
 # 🗂 Repository Structure
 
 ```
@@ -108,3 +90,15 @@ tests/                   ← unit tests
 - `paper/` is the reproducible paper pipeline: experiment specs, runners that generate artifacts, figure/table builders, and LaTeX exporters.The `paper/` package is organised to keep the build pipeline reproducible and easy to iterate on.
 
 Rule: `paper/` may import `src/`, but `src/` must not import `paper/`.
+
+
+## `src/` toolbox documentation
+
+Detailed documentation of the reusable library (`src/`) lives in `src/README.md`.
+
+
+## Contributing
+
+Please open a pull request for changes (no direct pushes to `main`).
+See `CONTRIBUTING.md` for workflow, tests, and style conventions.
+
