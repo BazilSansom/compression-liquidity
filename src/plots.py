@@ -15,6 +15,15 @@ from src.stats import lorenz_points, topk_shares
 def _ensure_dir(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
+def _finalize_plot(*, out_png: str | Path | None, dpi: int = 200, show: bool = False) -> None:
+    if out_png is not None:
+        out_png = Path(out_png)
+        _ensure_dir(out_png)
+        plt.savefig(out_png, dpi=dpi, bbox_inches="tight")
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
 def quick_plot_vs_lambda(
     rows: List[Dict[str, Any]],
@@ -56,13 +65,7 @@ def quick_plot_vs_lambda(
     plt.title(title or f"{y_key} vs liquidity shock intensity")
     plt.legend()
     plt.tight_layout()
-
-    if out_png is not None:
-        out_png = Path(out_png)
-        _ensure_dir(out_png)
-        plt.savefig(out_png, dpi=200)
-
-    plt.show()
+    _finalize_plot(out_png=out_png, dpi=200, show=show)
 
 
 def _group_stats(
@@ -100,6 +103,7 @@ def plot_overlay_vs_lambda(
     y_label: str | None = None,
     title: str | None = None,
     out_png: str | Path | None = None,
+    show_plot: bool = False, 
     show_n: bool = False,
     hline: float | None = 0.0,
 ) -> None:
@@ -140,13 +144,7 @@ def plot_overlay_vs_lambda(
     plt.title(title or f"{y_key} vs lambda (grouped by {group_key})")
     plt.legend()
     plt.tight_layout()
-
-    if out_png is not None:
-        out_png = Path(out_png)
-        _ensure_dir(out_png)
-        plt.savefig(out_png, dpi=200)
-
-    plt.show()
+    _finalize_plot(out_png=out_png, dpi=200, show=show_plot)
 
 
 # Backwards-compatible aliases (optional)
@@ -162,7 +160,6 @@ def plot_overlay_erls_vs_lambda(
     out_png: str | Path | None = None,
 ) -> None:
     plot_overlay_vs_lambda(rows, group_key=group_key, y_key="erls", y_label="ERLS", title=title, out_png=out_png)
-
 
 
 def _group_stats_multi(
@@ -223,7 +220,8 @@ def plot_stacked_shares_vs_lambda(
     method: str | None = None,
     two_panel: bool = True,
     # diagnostics / cosmetics
-    show_n: bool = True,
+    show_plots: bool = False,
+    show_n: bool = False,
     eps: float = 1e-12,          # draws with delta_R <= eps are skipped
     renormalize: bool = True,    # renormalize tiny floating drift so stack hits 1
 ) -> None:
@@ -356,14 +354,7 @@ def plot_stacked_shares_vs_lambda(
 
     fig.suptitle(title or "Mechanism shares vs $\\lambda$", y=1.05)
     fig.tight_layout()
-
-    if out_png is not None:
-        out_png = Path(out_png)
-        _ensure_dir(out_png)
-        plt.savefig(out_png, dpi=200, bbox_inches="tight")
-
-    plt.show()
-
+    _finalize_plot(out_png=out_png, dpi=200, show=show_plots)
 
 
 
