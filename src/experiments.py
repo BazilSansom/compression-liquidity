@@ -1,8 +1,10 @@
+# src/experiments.py
 from __future__ import annotations
 
 from typing import Callable, Optional, Tuple
 import numpy as np
 
+from src import buffers
 from src.simulation import run_fpa, FPAResult
 
 
@@ -26,11 +28,25 @@ def _aggregate_shortfall_for_buffers(
     V = np.asarray(V, dtype=float)
     buffers = _as_col(buffers)
     xi = _as_col(xi)
+    
+    N = V.shape[0]
+    if V.shape != (N, N):
+        raise ValueError("V must be square")
+    if buffers.shape != (N, 1) or xi.shape != (N, 1):
+        raise ValueError("buffers and xi must be (N,1)")
 
-    b0 = buffers - xi
-    res = run_fpa(V, b0, rel_tol=rel_tol_fpa, return_paths=False)
-    return res.aggregate_shortfall, res
+    # IMPORTANT: initial cash cannot be negative
+    e0 = np.maximum(buffers - xi, 0.0)
 
+    # run_fpa expects 1D vector for e0
+    e0_1d = e0.reshape(-1)
+
+    res = run_fpa(V, e0_1d, rel_tol=rel_tol_fpa, return_paths=False)
+    return float(res.aggregate_shortfall), res
+
+    #b0 = buffers - xi
+    #res = run_fpa(V, b0, rel_tol=rel_tol_fpa, return_paths=False)
+    #return res.aggregate_shortfall, res
 
 def find_min_buffers_for_target_shortfall(
     V: np.ndarray,
@@ -52,7 +68,7 @@ def find_min_buffers_for_target_shortfall(
     """
     Find minimal alpha such that buffers(alpha) = alpha * b_base achieve:
 
-        R(V, buffers(alpha) - xi) <= target_shortfall
+        R(V, max(buffers(alpha) - xi, 0)) <= target_shortfall
 
     where R is the aggregate shortfall from the FPA.
 

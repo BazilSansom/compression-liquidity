@@ -70,7 +70,8 @@ def generate_three_tier_structure(
     p : float
         Connection-density parameter.
     rng : np.random.Generator, optional
-        Random number generator for reproducibility.
+        Random number generator used for topology draws (edge presence / target choice).
+        If None, a fresh generator is created (non-reproducible unless seeded externally).
     degree_mode : {"bernoulli", "fixed"}, optional
         - "bernoulli": each potential edge is present independently with prob p,
           matching the modelling framework of D'Errico & Roukny (2017).
@@ -156,7 +157,8 @@ def assign_weights(
     L : np.ndarray
         Binary adjacency matrix (0/1) indicating presence of edges.
     rng : np.random.Generator, optional
-        Random number generator.
+        Random number generator used for weight draws on existing edges.
+        If None, a fresh generator is created.
     weight_mode : {"pareto", "uniform", "constant"}, optional
         Choice of weight distribution:
         - "pareto"   : heavy-tailed Pareto-type distribution (default).
@@ -214,12 +216,19 @@ def generate_three_tier_network(
     weight_mode: str = "pareto",
     alpha_weights: float = 2.0,
     scale_weights: float = 1.0,
-    rng: np.random.Generator | None = None,
+    rng_topology: np.random.Generator | None = None,
+    rng_weights: np.random.Generator | None = None,
     degree_mode: str = "bernoulli",
     round_to: float | None = None,
 ) -> PaymentNetwork:
     """
-    Convenience function: generate a full three-tier weighted network.
+      Generate a full three-tier weighted payment network.
+
+    This wrapper enforces independence between:
+      (i) topology randomness (which edges exist), and
+      (ii) weight randomness (edge weights conditional on topology),
+
+    by accepting two separate RNG streams: `rng_topology` and `rng_weights`.
 
     Parameters
     ----------
@@ -231,8 +240,12 @@ def generate_three_tier_network(
         Distribution used for edge weights. Default "pareto".
     alpha_weights, scale_weights : float, optional
         Parameters for the Pareto-type weights when weight_mode="pareto".
-    rng : np.random.Generator, optional
-        Random number generator for reproducibility.
+    rng_topology : np.random.Generator, optional
+        RNG used only for topology draws (adjacency / degree realisations).
+        If None, a fresh generator is created.
+    rng_weights : np.random.Generator, optional
+        RNG used only for weight draws on realised edges.
+        If None, a fresh generator is created.
     degree_mode : {"bernoulli", "fixed"}, optional
         Controls source/core/sink degrees:
         - "bernoulli": each edge present independently with prob p (default).
@@ -243,19 +256,25 @@ def generate_three_tier_network(
     Returns
     -------
     PaymentNetwork
-        Object containing weighted adjacency matrix and tier index sets.
+        Object containing the weighted adjacency matrix and tier index sets.
+    
     """
+    if rng_topology is None:
+        rng_topology = np.random.default_rng()
+    if rng_weights is None:
+        rng_weights = np.random.default_rng()
+
     L, source_nodes, core_nodes, sink_nodes = generate_three_tier_structure(
         n_core=n_core,
         n_source=n_source,
         n_sink=n_sink,
         p=p,
-        rng=rng,
+        rng=rng_topology,
         degree_mode=degree_mode,
     )
     W = assign_weights(
         L,
-        rng=rng,
+        rng=rng_weights,
         weight_mode=weight_mode,
         alpha=alpha_weights,
         scale=scale_weights,
@@ -268,10 +287,6 @@ def generate_three_tier_network(
         sink_nodes=sink_nodes,
     )
 
-import numpy as np
-
-# ... existing imports, PaymentNetwork, generate_three_tier_structure,
-# assign_weights, generate_three_tier_network, etc. ...
 
 
 def extract_largest_component(G: PaymentNetwork) -> PaymentNetwork:

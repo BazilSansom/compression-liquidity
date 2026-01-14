@@ -3,6 +3,8 @@ scipy
 networkx
 matplotlib
 
+statsmodels>=0.14
+
 # CDFD / compression dependencies
 discreteMarkovChain
 pulp

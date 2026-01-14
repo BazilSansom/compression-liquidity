@@ -32,16 +32,22 @@ class BufferSearchSpec:
 @dataclass(frozen=True)
 class ShockSpec:
     """
-    Shock config for Option A:
-    - draw one U_base using generate_uniform_factor_shapes (rho_xi, seed_offset+draw_id)
-    - reuse U_base across lam_grid (common random numbers)
-    - xi(lam) = lam * scale(V_ref) * U_base
+    Shock config (CRN across λ):
+
+    - For each Monte Carlo draw_id, draw one base shape U_base using
+      generate_uniform_factor_shapes with the experiment RNG stream.
+    - Reuse U_base across lam_grid (common random numbers across λ).
+    - Scale deterministically:
+          xi(λ) = λ * s(V_ref) ∘ U_base
+      where s(V_ref) is set by xi_scale.
+    
     """
     rho_xi: float = 0.3
     xi_scale: XiScale = "row_sum"
     # lam_grid: Sequence[float] = tuple(np.linspace(0.0, 1.0, 21))
+    lam_default: float = 0.6
     lam_grid: Sequence[float] = (0.0, 0.25, 0.5, 0.75, 1.0)
-    seed_offset: int = 10_000  # base offset so seeds don’t collide with network seeds
+    #seed_offset: int = 10_000  # base offset so seeds don’t collide with network seeds
     u_mode: Literal["uniform_factor"] = "uniform_factor" # U_base reused across λ
 
 
@@ -63,7 +69,7 @@ class NetworkSpec:
     degree_mode: str = "bernoulli"
 
     # RNG control
-    seed_offset: int = 1_000
+    #seed_offset: int = 1_000
 
     # Use largest connected component
     use_lcc: bool = True
@@ -88,8 +94,6 @@ class ExperimentSpec:
     One place to declare *everything* needed to run an experiment.
     
     buffer_mode:
-    - "fixed_shape": scale all nodes uniformly (planner benchmark)
-    - "fixed_shape_flexible": scale only flexible nodes; others fixed at benchmark (planner-flex)
     - "behavioural": buffer shape recomputed under compression
 
     """
@@ -97,7 +101,6 @@ class ExperimentSpec:
     network: NetworkSpec
     shock: ShockSpec
     compression: CompressionSpec
-    buffer_mode: BufferMode = "behavioural"
 
     # Buffer shape rule (callable): base = buffer_shape_fn(V)
     buffer_shape_fn: Callable[[np.ndarray], np.ndarray] = behavioural_base_from_V

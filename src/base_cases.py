@@ -9,12 +9,15 @@ BASE_CASE = ExperimentSpec(
         use_lcc=True,
         seed_offset=1_000,
     ),
+
     shock=ShockSpec(
         rho_xi=0,
         xi_scale="row_sum",
-        lam_grid=(0.0, 0.25, 0.5, 0.75, 1.0),
+        lam_default=0.6,
+        lam_grid=(0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5),
         seed_offset=10_000,
-    ),
+        ),
+
     compression=CompressionSpec(
         method="bff",
         solver="ortools",

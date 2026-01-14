@@ -1,8 +1,13 @@
+# src/shocks.py
 import numpy as np
 from dataclasses import dataclass
-from typing import Optional, Literal
+from typing import Literal
 from scipy.stats import norm
 
+
+# ============================================================
+# 1. Shock *shape* generation (dimensionless, no £ scaling)
+# ============================================================
 
 @dataclass
 class ShockShapeParams:
@@ -10,24 +15,19 @@ class ShockShapeParams:
     Parameters for generating *shape* of liquidity shocks via a one-factor
     Gaussian model.
 
-    The idea is to capture *dependence structure* across nodes, without yet
-    committing to a particular scaling in £. Scaling relative to VM size or
-    buffers can be handled in a separate step.
+    This layer encodes dependence structure only, not magnitude.
 
     Interpretation
     --------------
-    - rho in [0, 1] controls how "systemic" the shock is:
-        rho = 0  → purely idiosyncratic shocks (independent across nodes)
-        rho = 1  → perfectly common shock (all nodes same factor)
+    rho in [0,1]:
+        rho = 0  → purely idiosyncratic shocks
+        rho = 1  → perfectly common factor
 
-    - one_sided:
-        If True, we return non-negative "drain factors" (e.g. |Z_i|).
-        These can be interpreted as magnitudes of negative liquidity shocks,
-        which will later be applied as reductions in buffers.
+    one_sided:
+        If True, return non-negative magnitudes (liquidity drains).
+        If False, return signed Gaussian factors.
 
-        If False, we return signed standard-normal factors.
-
-    This class does *not* enforce any scaling; the raw shapes are dimensionless.
+    The output is dimensionless.
     """
     rho: float
     one_sided: bool = True
@@ -38,196 +38,150 @@ def generate_gaussian_factor_shapes(
     num_nodes: int,
     params: ShockShapeParams,
     n_samples: int = 1,
-    seed: Optional[int] = None,
+    rng: np.random.Generator | None = None,
 ) -> np.ndarray:
     """
-    Generate correlated shock *shapes* using a one-factor Gaussian model.
+    Generate correlated Gaussian shock *shapes* using a one-factor model:
 
-    For each sample s and node i, we construct:
+        Z_i = sqrt(rho) * Z_common + sqrt(1-rho) * eps_i.
 
-        Z_i[s] = sqrt(rho) * Z_common[s] + sqrt(1 - rho) * eps_i[s]
-
-    where Z_common[s] and eps_i[s] are i.i.d. N(0, 1). This yields:
-
-        Var(Z_i)            = 1
-        Corr(Z_i, Z_j)      = rho  for i != j
-
-    If params.one_sided is True, we convert these to non-negative "drain
-    magnitudes" via abs(Z_i). These can be used as the *shape* of liquidity
-    shocks that always reduce available buffers.
+    This function generates *dimensionless* shock shapes (no scaling by V_ref).
 
     Parameters
     ----------
     num_nodes : int
-        Number of nodes N in the network.
+        Number of nodes (dimension of each sample).
     params : ShockShapeParams
-        Parameters controlling the dependence structure and one/signed choice.
+        One-factor correlation parameter rho and one_sided flag.
     n_samples : int, optional
-        Number of independent shock vectors to generate. Default: 1.
-    seed : int, optional
-        Seed for NumPy's Generator, for reproducibility.
+        Number of independent samples to draw (default 1).
+    rng : np.random.Generator, optional
+        Random number generator used for sampling. If None, a fresh generator is created.
 
     Returns
     -------
-    shapes : np.ndarray
-        Array of shape (n_samples, num_nodes) containing dimensionless shock
-        factors. These have unit marginal variance in the signed case; if
-        one_sided=True, they become non-negative magnitudes.
+    np.ndarray
+        Array of shape (n_samples, num_nodes). If params.one_sided is True,
+        values are non-negative; otherwise values are real-valued.
 
-        - If one_sided=False:
-            shapes[s, i] ~ approx N(0, 1), Corr(shapes[:,i], shapes[:,j]) ≈ rho
-        - If one_sided=True:
-            shapes[s, i] = |Z_i|, so non-negative with correlation induced from Z.
-
-    Notes
-    -----
-    - This function only encodes the *shape* and correlation of shocks.
-      Scaling them to £-valued liquidity drains, e.g.
-
-          Δℓ_i = λ * p_i * shape_i
-
-      should be handled in a separate layer that knows about VM size p_i
-      or buffer levels.
     """
     rho = float(params.rho)
     if not (0.0 <= rho <= 1.0):
-        raise ValueError(f"rho must be in [0, 1], got {rho}")
+        raise ValueError(f"rho must be in [0,1], got {rho}")
 
-    rng = np.random.default_rng(seed)
+    if rng is None:
+        rng = np.random.default_rng()
 
-    # Common factor Z_common[s], shared across all nodes for each sample s
-    z_common = rng.normal(loc=0.0, scale=1.0, size=(n_samples, 1))
+    z_common = rng.normal(size=(n_samples, 1))
+    z_idio = rng.normal(size=(n_samples, num_nodes))
 
-    # Idiosyncratic eps_i[s]
-    z_idio = rng.normal(loc=0.0, scale=1.0, size=(n_samples, num_nodes))
-
-    # One-factor Gaussian model
     z = np.sqrt(rho) * z_common + np.sqrt(1.0 - rho) * z_idio
 
     if params.one_sided:
-        shapes = np.abs(z)  # non-negative magnitudes representing drains
+        return np.abs(z)
     else:
-        shapes = z          # signed shocks
-
-    return shapes
+        return z
 
 
 def gaussian_to_uniform01(z: np.ndarray) -> np.ndarray:
     """
-    Map standard normal samples z to uniforms in (0,1) via the normal CDF.
+    Map standard normal samples to Uniform(0,1) via the normal CDF.
     """
     return norm.cdf(z)
-
 
 
 @dataclass
 class UniformShockShapeParams:
     """
     Parameters for generating correlated Uniform(0,1) shock shapes using
-    the same one-factor Gaussian dependence structure.
-
-    - rho in [0, 1] is interpreted as the correlation parameter in the
-      underlying Gaussian factor model. The resulting uniforms are linked
-      via a Gaussian copula; their Pearson correlation will be a monotone
-      function of rho but not equal to rho.
+    a Gaussian copula.
     """
     rho: float
-
 
 
 def generate_uniform_factor_shapes(
     num_nodes: int,
     params: UniformShockShapeParams,
     n_samples: int = 1,
-    seed: Optional[int] = None,
+    rng: np.random.Generator | None = None,
 ) -> np.ndarray:
     """
-    Generate correlated Uniform(0,1) shock shapes using the Gaussian factor model.
+    Generate correlated Uniform(0,1) shock *shapes* using a Gaussian copula.
 
-    Steps:
-      1. Generate signed Gaussian factor shapes Z with correlation parameter rho.
-      2. Apply the standard normal CDF component-wise to obtain U in (0,1).
+    This is a pure shape generator: no £ scaling and no dependence on V_ref.
 
     Parameters
     ----------
     num_nodes : int
-        Number of nodes N in the network.
+        Number of nodes (dimension of each sample).
     params : UniformShockShapeParams
-        Parameters controlling the underlying Gaussian factor correlation.
+        Copula correlation parameter rho.
     n_samples : int, optional
-        Number of independent shock vectors to generate. Default: 1.
-    seed : int, optional
-        Seed for NumPy's Generator, for reproducibility.
+        Number of independent samples to draw (default 1).
+    rng : np.random.Generator, optional
+        Random number generator used for sampling. If None, a fresh generator is created.
 
     Returns
     -------
-    uniforms : np.ndarray
-        Array of shape (n_samples, num_nodes) containing Uniform(0,1) shock
-        shapes, with dependence given by a Gaussian copula.
-    """
-    rho = float(params.rho)
-    if not (0.0 <= rho <= 1.0):
-        raise ValueError(f"rho must be in [0, 1], got {rho}")
+    np.ndarray
+        Array of shape (n_samples, num_nodes) with entries in (0,1).
 
-    gauss_params = ShockShapeParams(rho=rho, one_sided=False)
+    """
+    gauss_params = ShockShapeParams(rho=params.rho, one_sided=False)
+
     Z = generate_gaussian_factor_shapes(
         num_nodes=num_nodes,
         params=gauss_params,
         n_samples=n_samples,
-        seed=seed,
+        rng=rng,
     )
-    U = gaussian_to_uniform01(Z)
-    return U
+
+    return gaussian_to_uniform01(Z)
 
 
+# ============================================================
+# 2. Deterministic scaling: shape → £ liquidity drain
+# ============================================================
 
-def generate_liquidity_drain_xi(
+def xi_from_uniform_base(
     V_ref: np.ndarray,
-    *,
-    rho: float,
+    U: np.ndarray,
     lam: float,
-    seed: Optional[int] = None,
-    scale: str = "row_sum",
+    *,
+    scale: Literal["row_sum", "col_sum", "total"] = "row_sum",
 ) -> np.ndarray:
     """
-    Generate a one-sided liquidity drain vector xi (N x 1) in £, to be subtracted
-    from buffers before running FPA.
+    Deterministic scaling rule (common-random-numbers across λ):
+        
+        xi(λ) = λ * s(V_ref) ∘ U,
 
-    xi_i = lam * s_i(V_ref) * U_i,
-    where U_i ~ Uniform(0,1) with Gaussian-copula dependence controlled by rho.
+    where U is held fixed as λ varies.
 
     Parameters
     ----------
     V_ref : np.ndarray
-        Reference VM obligations matrix used ONLY to set scale (typically pre-compression V).
-        This supports the "fixed £ shock across compression" experiment design.
-    rho : float
-        Dependence parameter for Gaussian-copula uniform draws.
-        rho=0 independent; rho=1 perfectly common in the underlying factor model.
+        Reference VM obligations matrix (used only for scaling).
+    U : np.ndarray
+        N x 1 vector with entries in [0,1].
     lam : float
-        Intensity. Since U in [0,1], xi_i <= lam * s_i(V_ref).
-    seed : int, optional
-        RNG seed for reproducibility.
+        Shock intensity parameter.
     scale : {"row_sum","col_sum","total"}
-        How to map V_ref to node scale s_i(V_ref):
-        - "row_sum": s_i = sum_j V_ref[i,j] (outgoing payable) [default]
-        - "col_sum": s_i = sum_j V_ref[j,i] (incoming receivable)
-        - "total":   s_i = (sum_{k,l} V_ref[k,l]) / N (equal per node based on total)
+        Defines s_i(V_ref).
 
     Returns
     -------
     xi : np.ndarray
-        N x 1 vector of non-negative drains in £.
+        N x 1 vector of non-negative liquidity drains.
     """
     V_ref = np.asarray(V_ref, dtype=float)
-    N = V_ref.shape[0]
+    U = np.asarray(U, dtype=float).reshape(-1, 1)
 
-    U = generate_uniform_factor_shapes(
-        num_nodes=N,
-        params=UniformShockShapeParams(rho=rho),
-        n_samples=1,
-        seed=seed,
-    )[0, :].reshape(-1, 1)
+    N = V_ref.shape[0]
+    if U.shape != (N, 1):
+        raise ValueError(f"U must have shape {(N,1)}, got {U.shape}")
+
+    eps = 1e-12
+    U = np.clip(U, eps, 1.0 - eps)
 
     if scale == "row_sum":
         s = V_ref.sum(axis=1).reshape(-1, 1)
@@ -238,6 +192,66 @@ def generate_liquidity_drain_xi(
     else:
         raise ValueError("scale must be one of {'row_sum','col_sum','total'}")
 
-    xi = lam * s * U
+    xi = float(lam) * s * U
+
+    # optional but great for debugging stability
+    if not np.all(np.isfinite(xi)):
+        raise ValueError("xi contains non-finite values (nan/inf).")
+
     return xi
 
+
+
+# ============================================================
+# 3. Convenience wrapper: one-shot realised £ shock
+# ============================================================
+
+def generate_liquidity_drain_xi(
+    V_ref: np.ndarray,
+    *,
+    rho: float,
+    lam: float,
+    rng: np.random.Generator | None = None,
+    scale: Literal["row_sum", "col_sum", "total"] = "row_sum",
+) -> np.ndarray:
+    """
+
+      Convenience wrapper: generate a realised £-valued liquidity drain vector xi.
+
+    Steps:
+      1) draw a correlated Uniform(0,1) shape U using a Gaussian copula
+      2) apply deterministic scaling via xi_from_uniform_base
+
+    Parameters
+    ----------
+    V_ref : np.ndarray
+        Reference VM obligations matrix used only for scaling.
+    rho : float
+        Copula correlation parameter in [0,1].
+    lam : float
+        Shock intensity.
+    rng : np.random.Generator, optional
+        RNG used for the shape draw. If None, a fresh generator is created.
+    scale : {"row_sum","col_sum","total"}, optional
+        Scaling rule s(V_ref) used in xi_from_uniform_base.
+
+    Returns
+    -------
+    np.ndarray
+        N x 1 vector xi of non-negative liquidity drains.
+
+    """
+    if rng is None:
+        rng = np.random.default_rng()
+
+    V_ref = np.asarray(V_ref, dtype=float)
+    N = V_ref.shape[0]
+
+    U = generate_uniform_factor_shapes(
+        num_nodes=N,
+        params=UniformShockShapeParams(rho=rho),
+        n_samples=1,
+        rng=rng,
+    )[0].reshape(-1, 1)
+
+    return xi_from_uniform_base(V_ref, U, lam, scale=scale)
