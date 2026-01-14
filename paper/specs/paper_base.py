@@ -6,7 +6,7 @@ from src.experiment_specs import (
 
 # Paper-wide Monte Carlo default (not part of ExperimentSpec)
 PAPER_MASTER_SEED=12345
-PAPER_N_DRAWS = 20
+PAPER_N_DRAWS = 200
 
 PAPER_BASE = ExperimentSpec(
     name="base_spec",
