@@ -17,7 +17,7 @@ __pycache__/
 # ===============================
 *.egg-info/
 dist/
-build/
+/build/
 
 # ===============================
 # Test / coverage artifacts
@@ -30,12 +30,22 @@ htmlcov/
 # Jupyter / scratch outputs
 # ===============================
 .ipynb_checkpoints/
+
+# ===============================
+# local archive / legacy work
+# ===============================
 scratch/
+attic/
 
 # ===============================
 # Generated figures / results
 # ===============================
-figures/
+/figures/
+
+# ===============================
+# Paper pipeline outputs (gitignored)
+# ===============================
+/outputs/
 
 # ===============================
 # OS / editor cruft
@@ -43,3 +53,14 @@ figures/
 .DS_Store
 .idea/
 .vscode/
+
+# ===============================
+# Miscellaneous MIGHT BE useful to keep
+# ===============================
+# Type check / lint caches (optional)
+.mypy_cache/
+.ruff_cache/
+.pytype/
+
+# Local Python version file (optional)
+.python-version
