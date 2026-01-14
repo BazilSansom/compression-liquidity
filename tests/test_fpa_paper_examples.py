@@ -73,3 +73,19 @@ def test_fpa_example1_all_obligations_paid_is_equivalent_to_zero_shortfall_and_z
     assert np.allclose(_as_col(result.residual_obligations), 0.0, atol=1e-12, rtol=0.0)
     assert np.allclose(_as_col(result.shortfall), 0.0, atol=1e-12, rtol=0.0)
     assert float(result.aggregate_shortfall) == pytest.approx(0.0, abs=1e-12)
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "example_fn",
+    [bardoscia_example1, bardoscia_example2, bardoscia_example3],
+)
+def test_fpa_nodes_that_pay_have_zero_residual(example_fn):
+    L, e0, *_ = example_fn()
+    res = run_fpa(L, e0)
+
+    act = np.asarray(res.activation_round).reshape(-1)
+    resid = _as_col(res.residual_obligations).reshape(-1)
+
+    paid = act >= 1
+    if np.any(paid):
+        assert np.max(resid[paid]) <= 1e-12
