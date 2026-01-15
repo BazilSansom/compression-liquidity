@@ -64,3 +64,4 @@ attic/
 
 # Local Python version file (optional)
 .python-version
+.venv_check/
