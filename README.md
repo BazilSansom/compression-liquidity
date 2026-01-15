@@ -8,11 +8,17 @@ This repository contains the code used to generate the simulation artifacts, fig
 
 ### Setup
 
-Create and activate a virtual environment, then install dependencies:
+Create and activate a virtual environment:
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+```
+
+Then install runtime and dev dependencies:
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
 ```
 
 **Run the full test suite:**
