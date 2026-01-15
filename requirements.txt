@@ -1,5 +1,6 @@
 numpy
 scipy
+pandas
 networkx
 matplotlib
 
@@ -9,4 +10,3 @@ statsmodels>=0.14
 discreteMarkovChain
 pulp
 ortools
-
