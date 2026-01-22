@@ -345,14 +345,24 @@ def _hist_delta_vuln_core(
             f"Trim (plotted) = [{p_lo:.1f}, {p_hi:.1f}] pct",
         ]
     )
+    #plt.gca().text(
+    #    0.02,
+    #    0.98,
+    #    txt,
+    #    transform=plt.gca().transAxes,
+    #    va="top",
+    #    ha="left",
+    #)
+
     plt.gca().text(
-        0.02,
+        0.98,
         0.98,
         txt,
         transform=plt.gca().transAxes,
         va="top",
-        ha="left",
+        ha="right",
     )
+
 
     out_png.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_png, dpi=200, bbox_inches="tight")
