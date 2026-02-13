@@ -42,9 +42,9 @@ class Exp3Config:
     lam_eval: float = 0.75
 
     # calibration and evaluation sample sizes
-    n_calib: int = 100
+    n_calib: int = 200
     alpha_agg: str = "median"   # "median" or "mean"
-    n_xi_draws: int = 100
+    n_xi_draws: int = 200
 
     # diagnostics
     topk: int = 5

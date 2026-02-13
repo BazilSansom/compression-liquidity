@@ -4,7 +4,7 @@ from src.experiment_specs import (
     ExperimentSpec, NetworkSpec, ShockSpec, CompressionSpec, BufferSearchSpec
 )
 
-# Paper-wide Monte Carlo default (not part of ExperimentSpec)
+# Paper-wide Monte Carlo defaults
 PAPER_MASTER_SEED=12345
 PAPER_N_DRAWS = 200
 
@@ -20,7 +20,7 @@ PAPER_BASE = ExperimentSpec(
         rho_xi=0,
         xi_scale="row_sum",
         lam_default=0.6,
-        lam_grid=(0.0, 0.25, 0.5, 0.75, 1.0),
+        lam_grid=(0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5), 
     ),
     compression=CompressionSpec(
         method="bff",

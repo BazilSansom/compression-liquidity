@@ -27,16 +27,17 @@ def make(artifact_dir: Path) -> Path:
             "share_still_inactive_cash_relief",
             "share_still_inactive_obligation_relief",
         ),
-        share_labels=(
-            r"$\Delta R_{\mathrm{new,trigger}}/\Delta R$",
-            r"$\Delta R_{\mathrm{new,late}}/\Delta R$",
-            r"$\Delta R_{\mathrm{cash\ relief\ on\ inactive}}/\Delta R$",
-            r"$\Delta R_{\mathrm{obligation\ relief\ on\ inactive}}/\Delta R$",
-        ),
-        title="Exp1 fixed buffers | Mechanism shares",
+        share_labels = (
+            r"$\Delta R_{\mathrm{act},0}/\Delta R_s$",                         # was: new,trigger
+            r"$\Delta R_{\mathrm{act},+}/\Delta R_s$",                         # was: new,late
+            r"$\Delta R_{\mathrm{inflow}\to\mathrm{inactive}}/\Delta R_s$",    # was: cash relief on inactive
+            r"$\Delta R_{\mathrm{inactive,direct}}/\Delta R_s$",               # was: obligation relief on inactive
+        ),  
+
+        #title="Exp1 fixed buffers | Mechanism shares",
         out_png=out_png,
         two_panel=True,
-        show_n=True,
+        show_n=False,
     )
     return out_png
 

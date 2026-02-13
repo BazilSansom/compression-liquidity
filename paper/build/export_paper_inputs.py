@@ -4,6 +4,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Sequence
 
+from matplotlib import lines
+
 from paper.specs.paper_base import PAPER_BASE, PAPER_MASTER_SEED, PAPER_N_DRAWS
 from paper.specs.exp1 import SPEC as EXP1_SPEC  # Exp1Config
 from paper.specs.exp2 import SPEC as EXP2_SPEC  # Exp2Config
@@ -74,6 +76,11 @@ def _export_base(lines: list[str]) -> None:
     lines.append(_emit_macro("NetWeightMode", n.weight_mode))
     lines.append(_emit_macro("NetAlphaWeights", n.alpha_weights))
     lines.append(_emit_macro("NetScaleWeights", n.scale_weights))
+    
+    lines.append(_emit_macro("NetWeightUmin", n.weight_umin))
+    lines.append(_emit_macro("NetWeightUmax", n.weight_umax))
+    lines.append(_emit_macro("NetWeightCapMult", n.weight_cap_mult))
+
     lines.append(_emit_macro("NetDegreeMode", n.degree_mode))
     lines.append(_emit_macro("NetRoundTo", n.round_to))
     lines.append(_emit_macro("NetUseLCC", n.use_lcc))

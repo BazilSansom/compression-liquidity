@@ -144,6 +144,9 @@ def assign_weights(
     weight_mode: str = "pareto",
     alpha: float = 2.0,
     scale: float = 1.0,
+    pareto_u_min: float = 0.001,
+    pareto_u_max: float = 1.0,
+    pareto_cap_mult: float = 1000.0,
     w_min: float = 0.5,
     w_max: float = 1.5,
     constant_weight: float = 1.0,
@@ -189,9 +192,12 @@ def assign_weights(
 
     for i, j in zip(edges[0], edges[1]):
         if weight_mode == "pareto":
-            u = rng.uniform(0.001, 1.0)
+            #u = rng.uniform(0.001, 1.0)
+            u = rng.uniform(pareto_u_min, pareto_u_max)
             weight = scale * (1.0 / u) ** (1.0 / alpha)
-            weight = min(weight, 1000 * scale)
+            #weight = min(weight, 1000 * scale)
+            weight = min(weight, pareto_cap_mult * scale)
+
         elif weight_mode == "uniform":
             weight = rng.uniform(w_min, w_max)
         elif weight_mode == "constant":
@@ -216,6 +222,9 @@ def generate_three_tier_network(
     weight_mode: str = "pareto",
     alpha_weights: float = 2.0,
     scale_weights: float = 1.0,
+    pareto_u_min: float = 0.001,
+    pareto_u_max: float = 1.0,
+    pareto_cap_mult: float = 1000.0,
     rng_topology: np.random.Generator | None = None,
     rng_weights: np.random.Generator | None = None,
     degree_mode: str = "bernoulli",
@@ -278,6 +287,9 @@ def generate_three_tier_network(
         weight_mode=weight_mode,
         alpha=alpha_weights,
         scale=scale_weights,
+        pareto_u_min=pareto_u_min,
+        pareto_u_max=pareto_u_max,
+        pareto_cap_mult=pareto_cap_mult,
         round_to=round_to,
     )
     return PaymentNetwork(

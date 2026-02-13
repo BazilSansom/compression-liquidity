@@ -65,6 +65,11 @@ class NetworkSpec:
     scale_weights: float = 1.0
     round_to: float | None = 0.01
 
+    # Pareto draw controls (used only when weight_mode="pareto")
+    weight_umin: float = 0.001      
+    weight_umax: float = 1.0
+    weight_cap_mult: float = 1000.0 
+
     # Degree / topology options
     degree_mode: str = "bernoulli"
 

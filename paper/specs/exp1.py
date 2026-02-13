@@ -13,7 +13,7 @@ EXP1: ExperimentSpec = replace(
     name="exp1",
     shock=replace(
         PAPER_BASE.shock,
-        lam_grid=(0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5), # not different, just to demo replace
+        #lam_grid=(0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5), # not different, just to demo replace
         lam_default=0.6,
     ),
 )
@@ -21,7 +21,7 @@ EXP1: ExperimentSpec = replace(
 @dataclass(frozen=True)
 class Exp1Config:
     spec: ExperimentSpec
-    buffer_theta: float = 1           # <- my THETA_FIXED_BUFFERS in original code
+    buffer_theta: float = 1           
     methods: Tuple[str, ...] = ("bff", "maxc")
     maxc_solver: str = "ortools"
     #use_lcc: bool = True

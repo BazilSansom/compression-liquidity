@@ -409,7 +409,9 @@ def _latex_reg_table(
     r2s: List[float],
     include_fe: bool = True,
     hhi_label: str = r"$\Delta \mathrm{HHI}^{\mathrm{out}}_{ig} / \mathrm{HHI}^{\mathrm{out,BFF}}_{ig}$",
-    main_label: str = r"$\Delta s_{ig} / \ell^{\mathrm{BFF}}_{ig}$",
+    #main_label: str = r"$\Delta s_{ig} / \ell^{\mathrm{BFF}}_{ig}$",
+    main_label: str = r"$\Delta \mathrm{slack}_{ig} / \ell^{\mathrm{BFF}}_{ig}$",
+
 ) -> str:
     """
     Build a 3-col LaTeX table (booktabs + tabularx) that matches your Overleaf style.
@@ -473,10 +475,17 @@ def _latex_reg_table(
         "\\emph{Notes:} The dependent variable is the core-node vulnerability gap "
         "$\\Delta \\nu_{ig} = \\nu^{\\mathrm{maxC}}_{ig} - \\nu^{\\mathrm{BFF}}_{ig}$ under the common buffer scale "
         "$\\alpha=\\alpha^{\\ast}_{\\mathrm{BFF}}$. The key regressor is the slack difference normalised by outgoing "
-        "obligations under BFF, $\\Delta s_{ig}/\\ell^{\\mathrm{BFF}}_{ig}$. "
+        "obligations under BFF, $\\Delta \\mathrm{slack}_{ig}/\\ell^{\\mathrm{BFF}}_{ig}$. "
         "All specifications include network fixed effects (implemented via within-network demeaning). "
         "Standard errors (in parentheses) are clustered at the network level. "
         "$^{***}p<0.01$, $^{**}p<0.05$, $^{*}p<0.1$."
+        # "\\emph{Notes:} The dependent variable is the core-node vulnerability gap "
+        # "$\\Delta \\nu_{ig} = \\nu^{\\mathrm{maxC}}_{ig} - \\nu^{\\mathrm{BFF}}_{ig}$ under the common buffer scale "
+        # "$\\alpha=\\alpha^{\\ast}_{\\mathrm{BFF}}$. The key regressor is the slack difference normalised by outgoing "
+        # "obligations under BFF, $\\Delta s_{ig}/\\ell^{\\mathrm{BFF}}_{ig}$. "
+        # "All specifications include network fixed effects (implemented via within-network demeaning). "
+        # "Standard errors (in parentheses) are clustered at the network level. "
+        # "$^{***}p<0.01$, $^{**}p<0.05$, $^{*}p<0.1$."
     )
     lines.append("\\end{table}")
     lines.append("% -------------------------------------------------------------------")
@@ -562,8 +571,12 @@ def make_all(artifact_dir: Path) -> List[Path]:
         out_png=scatter_dm_png,
         out_pdf=scatter_dm_pdf,
         title="Binned within-network relationship (core nodes)",
-        xlabel=r"Within-network demeaned normalised slack gap: $\Delta s/\ell$",
-        ylabel=r"Within-network demeaned vulnerability gap: $\Delta \nu$",
+        #xlabel=r"Within-network demeaned normalised slack gap: $\Delta s/\ell$",
+        #xlabel=r"Within-network demeaned normalised slack gap: $\Delta \mathrm{slack}/\ell$",
+        xlabel=r"Within-network demeaned normalised slack gap: $\Delta \mathrm{slack}/\ell^{\mathrm{BFF}}$",
+        #ylabel=r"Within-network demeaned vulnerability gap: $\Delta \nu$",
+        ylabel=r"Within-network demeaned vulnerability gap: $\Delta \nu=\nu^{\mathrm{maxC}}-\nu^{\mathrm{BFF}}$",
+
         q_bins=25,
         p_lo=1.0,
         p_hi=99.0,

@@ -352,7 +352,7 @@ def plot_stacked_shares_vs_lambda(
     handles, labels = axes[-1].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper center", ncol=len(share_keys), frameon=True)
 
-    fig.suptitle(title or "Mechanism shares vs $\\lambda$", y=1.05)
+    fig.suptitle(title, y=1.05)
     fig.tight_layout()
     _finalize_plot(out_png=out_png, dpi=200, show=show_plots)
 
